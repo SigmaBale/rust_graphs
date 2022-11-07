@@ -1,10 +1,7 @@
-use svg::Document;
-use svg::node::element::Path;
-use svg::node::element::path::Data;
-use std::collections::{VecDeque, HashMap, HashSet};
 use std::cmp::PartialEq;
-use std::hash::Hash;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
+use std::hash::Hash;
 
 pub mod directed_graph {
     use super::*;
@@ -14,13 +11,16 @@ pub mod directed_graph {
         value: T,
         children: Vec<Box<Node<T>>>,
     }
-    
-    impl<T> Node<T> 
-    where 
+
+    impl<T> Node<T>
+    where
         T: Clone + PartialEq,
     {
         pub fn new(value: T) -> Self {
-            Node { value, children: vec![] }
+            Node {
+                value,
+                children: vec![],
+            }
         }
         pub fn join(&mut self, node: Self) -> Self {
             self.children.push(Box::new(node));
@@ -54,7 +54,9 @@ pub mod directed_graph {
             let mut stack: Vec<&Node<T>> = vec![self];
             while !stack.is_empty() {
                 let current = stack.pop().unwrap();
-                if current.value == value { return true }
+                if current.value == value {
+                    return true;
+                }
                 for child in current.children.iter() {
                     stack.push(child.as_ref());
                 }
@@ -70,21 +72,24 @@ pub mod graph {
     #[derive(Clone, Debug)]
     pub struct Graph<Nid, N = (), E = ()> {
         nodes: HashMap<Nid, N>,
-        adjacent: HashMap<Nid, Vec<(Nid, E)>>
+        adjacent: HashMap<Nid, Vec<(Nid, E)>>,
     }
 
-    impl<Nid, N, E> Graph<Nid, N, E> 
+    impl<Nid, N, E> Graph<Nid, N, E>
     where
-        Nid: Hash + Eq
+        Nid: Hash + Eq,
     {
         pub fn new() -> Graph<Nid, N, E> {
-            Graph { nodes: HashMap::new(), adjacent: HashMap::new() }
+            Graph {
+                nodes: HashMap::new(),
+                adjacent: HashMap::new(),
+            }
         }
 
-        pub fn insert_node(&mut self, node_id: Nid, node: N) -> Option<N>{
+        pub fn insert_node(&mut self, node_id: Nid, node: N) -> Option<N> {
             self.nodes.insert(node_id, node)
         }
-        
+
         pub fn add_edge(&mut self, from: Nid, to: Nid, edge: E) {
             let entry = self.adjacent.entry(from).or_default();
             entry.push((to, edge));
@@ -94,12 +99,14 @@ pub mod graph {
             self.nodes.remove(node_id)
         }
 
-        pub fn remove_edges(&mut self, from: Nid, to: &Nid) -> Result<(), &'static str>{
+        pub fn remove_edges(&mut self, from: Nid, to: &Nid) -> Result<(), &'static str> {
             if self.adjacent.contains_key(&from) {
                 let entry = self.adjacent.entry(from).or_default();
-                entry.retain(|(id, _)| id != to); 
+                entry.retain(|(id, _)| id != to);
                 Ok(())
-            }else { Err("Node does not have any edges!") }            
+            } else {
+                Err("Node does not have any edges!")
+            }
         }
 
         pub fn get_node(&self, node_id: &Nid) -> Option<&N> {
@@ -108,12 +115,21 @@ pub mod graph {
 
         pub fn get_edge(&self, from: &Nid, to: &Nid) -> Option<&E> {
             if let Some(vec) = self.adjacent.get(from) {
-                vec.iter().find(|(node_id, _)| node_id == to).map(|(_, edge)| edge)
-            }else { None }
+                vec.iter()
+                    .find(|(node_id, _)| node_id == to)
+                    .map(|(_, edge)| edge)
+            } else {
+                None
+            }
         }
 
         pub fn get_adjacent(&self, node_id: &Nid) -> Vec<&Nid> {
-            self.adjacent.get(node_id).unwrap().iter().map(|(node_id, _)| node_id).collect()
+            self.adjacent
+                .get(node_id)
+                .unwrap()
+                .iter()
+                .map(|(node_id, _)| node_id)
+                .collect()
         }
 
         pub fn edges_from(&self, node_id: &Nid) -> Option<&Vec<(Nid, E)>> {
@@ -122,14 +138,23 @@ pub mod graph {
 
         pub fn edges_from_to(&self, from: &Nid, to: &Nid) -> Option<Vec<&E>> {
             if let Some(vec) = self.adjacent.get(from) {
-                Some(vec.iter().filter(|(node, _)| node == to).map(|(_, edge)| edge).collect::<Vec<&E>>())
-            }else { None }
+                Some(
+                    vec.iter()
+                        .filter(|(node, _)| node == to)
+                        .map(|(_, edge)| edge)
+                        .collect::<Vec<&E>>(),
+                )
+            } else {
+                None
+            }
         }
 
         pub fn edge_count(&self, from: &Nid, to: &Nid) -> usize {
             if let Some(vec) = self.adjacent.get(from) {
                 vec.iter().filter(|(node, _)| node == to).count()
-            }else { 0 }
+            } else {
+                0
+            }
         }
 
         pub fn iter_nodes(&self) -> impl Iterator<Item = (&Nid, &N)> {
@@ -142,14 +167,13 @@ pub mod graph {
 
         pub fn contains(&self, node_id: &Nid) -> bool {
             self.nodes.contains_key(node_id)
-        } 
+        }
     }
 
-
-    impl<Nid, N, E> Graph<Nid, N, E> 
+    impl<Nid, N, E> Graph<Nid, N, E>
     where
         Nid: Hash + Eq + Clone,
-        E: PartialEq + Clone
+        E: PartialEq + Clone,
     {
         pub fn push_undirected_edge(&mut self, from: Nid, to: Nid, edge: E) {
             self.add_edge(from.clone(), to.clone(), edge.clone());
@@ -160,21 +184,25 @@ pub mod graph {
             if self.remove_edge(from.clone(), &edge).is_ok() {
                 self.add_edge(to, from, edge);
                 Ok(())
-            }else { Err("Could not flip the edge, invalid edge or node provided.") }
+            } else {
+                Err("Could not flip the edge, invalid edge/node provided.")
+            }
         }
     }
 
-    impl<Nid, N, E> Graph<Nid, N, E> 
+    impl<Nid, N, E> Graph<Nid, N, E>
     where
         Nid: Hash + Eq,
-        E: PartialEq + Clone
+        E: PartialEq + Clone,
     {
         pub fn remove_edge(&mut self, from: Nid, edge: &E) -> Result<(), &'static str> {
             if self.adjacent.contains_key(&from) {
                 let entry = self.adjacent.entry(from).or_default();
                 entry.retain(|(_, e)| e != edge);
                 Ok(())
-            }else { Err("Node does not have specified edge!") }
+            } else {
+                Err("Node does not have specified edge!")
+            }
         }
     }
 }
